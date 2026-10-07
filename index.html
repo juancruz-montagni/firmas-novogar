@@ -247,7 +247,6 @@
 
   <section class="pantalla" data-paso="1">
     <h2 class="pregunta">¿Cómo te llamás?</h2>
-    <p class="detalle">Tal como querés que aparezca en el correo.</p>
     <div class="campo">
       <label for="nombre">Nombre y apellido</label>
       <input type="text" id="nombre" autocomplete="name" placeholder="Nombre y apellido" />
@@ -260,7 +259,6 @@
 
   <section class="pantalla" data-paso="2">
     <h2 class="pregunta">¿Qué hacés en Novogar?</h2>
-    <p class="detalle">Tu puesto, como aparece en el organigrama.</p>
     <div class="campo">
       <label for="puesto">Puesto</label>
       <input type="text" id="puesto" autocomplete="organization-title" placeholder="Tu puesto" />
@@ -274,7 +272,6 @@
 
   <section class="pantalla" data-paso="3">
     <h2 class="pregunta">Tu correo</h2>
-    <p class="detalle">Lo completamos a partir de tu nombre. Si no es exacto, corregilo.</p>
     <div class="campo">
       <label for="mail">Correo</label>
       <input type="email" id="mail" autocomplete="email" placeholder="nombre.apellido@novogar.com.ar" />
@@ -288,7 +285,6 @@
 
   <section class="pantalla" data-paso="4">
     <h2 class="pregunta">¿En qué sucursal trabajás?</h2>
-    <p class="detalle">Con eso completamos solos la dirección y el teléfono fijo.</p>
     <div class="campo">
       <label for="sucursal">Sucursal</label>
       <select id="sucursal"></select>
@@ -307,7 +303,6 @@
 
   <section class="pantalla" data-paso="5">
     <h2 class="pregunta">¿Dónde te llaman?</h2>
-    <p class="detalle">El interno es opcional. Si lo ponés, el enlace marca los dos seguidos.</p>
     <div class="campo dupla">
       <div>
         <label for="celular">Celular</label>
@@ -327,17 +322,16 @@
 
   <section class="pantalla" data-paso="6">
     <h2 class="pregunta">Por último, la imagen</h2>
-    <p class="detalle">Por ahora todas las firmas de la empresa llevan el logo.</p>
     <div class="opciones">
       <label class="opcion">
         <input type="radio" name="imagen" value="logo" checked />
-        <span><b>El logo de Novogar</b><i>Igual para todos, siempre prolijo.</i></span>
+        <span><b>El logo de Novogar</b></span>
       </label>
       <!-- Para habilitar las fotos: sacar el disabled de acá abajo y la clase
            "apagada" del label. El resto del circuito ya funciona. -->
       <label class="opcion apagada">
         <input type="radio" name="imagen" value="foto" disabled />
-        <span><b>Mi foto <em class="pronto">Próximamente</em></b><i>El directorio todavía no usa fotos en las firmas.</i></span>
+        <span><b>Mi foto <em class="pronto">Próximamente</em></b></span>
       </label>
     </div>
 
@@ -375,7 +369,6 @@
   <section class="pantalla" data-paso="7">
     <p class="festejo">Lista ✓</p>
     <h2 class="pregunta">Esta es tu firma</h2>
-    <p class="detalle">Abajo está la misma sobre fondo oscuro, que es como la ve quien usa tema oscuro.</p>
 
     <div>
       <p class="etiqueta" style="margin-top:0;">Fondo claro</p>
