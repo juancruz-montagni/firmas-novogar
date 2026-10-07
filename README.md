@@ -35,6 +35,19 @@ El slider **Cuánto recortar** mueve esos umbrales, por si la foto tiene el
 fondo más o menos parejo. Y siempre se puede destildar la casilla y usar la
 foto tal cual.
 
+**Dónde falla.** Con fondos que tienen degradado o sombras el resultado es
+pobre: el color del fondo varía tanto que, o quedan restos, o la expansión se
+mete por una zona de piel clara y abre agujeros en la cara. No hay manera de
+arreglarlo sin un modelo de segmentación, y eso son decenas de megas que no
+justifican el caso. Por eso, cuando alguien sube una foto, la pantalla le
+ofrece **remove.bg** como salida: hace el recorte bien, devuelve un PNG y ese
+PNG se carga acá igual.
+
+Para que esa vuelta funcione, la app detecta si la imagen ya trae
+transparencia (más del 3% de píxeles transparentes, para no confundirse con
+una esquina redondeada). Si ya viene recortada, esconde la casilla y la usa tal
+cual: volver a procesarla sólo podría empeorarla.
+
 ## Mantenimiento
 
 ### Agregar o corregir una sucursal

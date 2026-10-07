@@ -131,10 +131,29 @@ function cajaVisible(ctx, ancho, alto) {
 const foto = {
   imagen: null,
   quitar: true,
-  tolerancia: 60,
+  yaSinFondo: false,
+  tolerancia: 42,
   ALTO: 126,          // alto final dentro de la firma
   MAX_LADO: 900,      // tope de procesamiento, para no colgar el navegador
 };
+
+/** ¿La imagen ya trae transparencia? Si alguien la pasó por remove.bg no hay
+ *  que volver a recortarla: cualquier cosa que hagamos sólo puede empeorarla. */
+function tieneTransparencia(img) {
+  const lado = 220;
+  const esc = Math.min(1, lado / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * esc));
+  const h = Math.max(1, Math.round(img.height * esc));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+  let transparentes = 0;
+  for (let i = 3; i < px.length; i += 4) if (px[i] < 24) transparentes++;
+  // con menos del 3% puede ser sólo una esquina redondeada, no un recorte
+  return transparentes / (w * h) > 0.03;
+}
 
 /** Procesa la foto y devuelve {src, w, h} lista para la firma. */
 function procesarFoto(paraPreview) {
@@ -150,7 +169,10 @@ function procesarFoto(paraPreview) {
 
   if (foto.quitar) quitarFondo(ctx, w, h, foto.tolerancia);
 
-  const caja = foto.quitar ? cajaVisible(ctx, w, h) : { x: 0, y: 0, w, h };
+  // se recorta el aire sobrante siempre que haya transparencia, la haya
+  // puesto la app o la imagen original
+  const recortar = foto.quitar || foto.yaSinFondo;
+  const caja = recortar ? cajaVisible(ctx, w, h) : { x: 0, y: 0, w, h };
 
   // se entrega al doble del tamaño final, para que se vea nítida en retina
   const altoFinal = paraPreview ? 150 : foto.ALTO;
@@ -186,6 +208,15 @@ function cargarArchivo(archivo) {
     const img = new Image();
     img.onload = () => {
       foto.imagen = img;
+      foto.yaSinFondo = tieneTransparencia(img);
+      if (foto.yaSinFondo) {
+        foto.quitar = false;
+        $('#quitarFondo').checked = false;
+      }
+      $('#filaQuitar').hidden = foto.yaSinFondo;
+      $('#yaSinFondo').hidden = !foto.yaSinFondo;
+      $('#filaTolerancia').hidden = !foto.quitar;
+      $('#rescate').hidden = foto.yaSinFondo;
       $('#soltar').hidden = true;
       $('#editor').classList.add('visible');
       dibujarPreview();
@@ -473,6 +504,12 @@ function iniciar() {
 
   $('#otraFoto').addEventListener('click', () => {
     foto.imagen = null;
+    foto.yaSinFondo = false;
+    foto.quitar = true;
+    $('#quitarFondo').checked = true;
+    $('#filaQuitar').hidden = false;
+    $('#yaSinFondo').hidden = true;
+    $('#rescate').hidden = true;
     $('#editor').classList.remove('visible');
     soltar.hidden = false;
     $('#archivo').value = '';

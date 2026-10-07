@@ -115,6 +115,14 @@
     background-position: 0 0, 0 7px, 7px -7px, -7px 0;
   }
   .interruptor { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 14px; cursor: pointer; }
+  .rescate { margin-top: 18px; border: 1px solid #F3D5D8; background: #FFF8F8; border-radius: 12px; padding: 16px 18px; }
+  .rescate[hidden] { display: none; }
+  .rescate b { font-size: 14px; display: block; margin-bottom: 5px; }
+  .rescate p { margin: 0; font-size: 13px; color: var(--suave); line-height: 1.55; }
+  .rescate p.ojo { margin-top: 8px; color: var(--tenue); font-size: 12.5px; }
+  .rescate a { color: var(--rojo); font-weight: bold; }
+  .listo-sin-fondo { margin: 0; font-size: 13px; color: var(--verde); font-weight: bold; }
+  .listo-sin-fondo[hidden] { display: none; }
   .interruptor input { width: 18px; height: 18px; accent-color: var(--rojo); cursor: pointer; }
   #filaTolerancia[hidden] { display: none; }
   .controles { flex: 1 1 220px; display: flex; flex-direction: column; gap: 10px; }
@@ -332,18 +340,27 @@
       <div class="editor" id="editor">
         <div class="previsualizacion" id="previewFoto"></div>
         <div class="controles">
-          <label class="interruptor">
+          <label class="interruptor" id="filaQuitar">
             <input type="checkbox" id="quitarFondo" checked />
             <span>Quitar el fondo</span>
           </label>
+          <p class="listo-sin-fondo" id="yaSinFondo" hidden>Esta foto ya viene sin fondo ✓ La usamos tal cual.</p>
           <p class="pista" style="margin:0;">Funciona con fondos lisos, como los de las fotos de credencial.</p>
           <div id="filaTolerancia">
             <label for="tolerancia">Cuánto recortar</label>
-            <input type="range" id="tolerancia" min="25" max="120" value="60" />
+            <input type="range" id="tolerancia" min="25" max="120" value="42" />
             <p class="pista" style="margin:4px 0 0;">Si quedan restos del fondo, subilo. Si se come parte tuya, bajalo.</p>
           </div>
           <button type="button" class="btn secundario" id="otraFoto">Elegir otra foto</button>
         </div>
+      </div>
+      <div class="rescate" id="rescate" hidden>
+        <b>¿Te quedó mal el recorte?</b>
+        <p>Pasa seguido con fondos que tienen degradado o sombras. La salida rápida es
+        <a href="https://www.remove.bg/es/upload" target="_blank" rel="noopener noreferrer">remove.bg</a>:
+        subís la foto, te la devuelve recortada en PNG y después la cargás acá. Cuando la foto ya
+        viene sin fondo, la usamos tal cual, sin tocarla.</p>
+        <p class="ojo">Ojo: remove.bg es un servicio de afuera, así que ahí tu foto sí se sube a internet. Acá no.</p>
       </div>
     </div>
 
