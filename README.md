@@ -15,38 +15,23 @@ teléfonos y la imagen. Al final aparece la firma con el botón para copiarla y
 las instrucciones de instalación para Gmail, Outlook, Outlook web, Thunderbird
 y el celular.
 
-## El quitado de fondo
+## La foto
 
-Cuando alguien sube su foto, la app le saca el fondo sin pedirle nada. No usa
-un modelo de IA: serían decenas de megas de descarga para algo que acá se
-resuelve con geometría.
+La app no le saca el fondo a la foto: manda al usuario a **remove.bg**, que lo
+hace bien, y después recibe el PNG recortado.
 
-Las fotos de credencial se sacan contra un fondo liso, así que el algoritmo
-toma el color de las cuatro esquinas y se expande desde los bordes hacia
-adentro mientras el color siga pareciéndose. Al avanzar por píxeles vecinos y
-no por color suelto, una camisa blanca en el medio de la foto no se borra: no
-está conectada con el borde de la imagen.
+Hubo una versión que sí lo intentaba sola, con un recorte por color que se
+expandía desde los bordes. Andaba contra un fondo plano, pero con degradado o
+sombras el color variaba tanto que, o quedaban restos, o la expansión se metía
+por una zona de piel clara y abría agujeros en la cara. Hacerlo bien pide un
+modelo de segmentación: decenas de megas que cada empleado tendría que bajar
+para algo que remove.bg resuelve en dos clics. Se quitó.
 
-El borde no se corta de golpe. Hay dos umbrales: hasta el primero es fondo
-seguro y queda transparente; entre el primero y el segundo el alfa se
-desvanece, que es lo que evita el recorte en escalera.
-
-El slider **Cuánto recortar** mueve esos umbrales, por si la foto tiene el
-fondo más o menos parejo. Y siempre se puede destildar la casilla y usar la
-foto tal cual.
-
-**Dónde falla.** Con fondos que tienen degradado o sombras el resultado es
-pobre: el color del fondo varía tanto que, o quedan restos, o la expansión se
-mete por una zona de piel clara y abre agujeros en la cara. No hay manera de
-arreglarlo sin un modelo de segmentación, y eso son decenas de megas que no
-justifican el caso. Por eso, cuando alguien sube una foto, la pantalla le
-ofrece **remove.bg** como salida: hace el recorte bien, devuelve un PNG y ese
-PNG se carga acá igual.
-
-Para que esa vuelta funcione, la app detecta si la imagen ya trae
-transparencia (más del 3% de píxeles transparentes, para no confundirse con
-una esquina redondeada). Si ya viene recortada, esconde la casilla y la usa tal
-cual: volver a procesarla sólo podría empeorarla.
+Lo que sí hace la app es mirar si la imagen trae transparencia (más del 3% de
+píxeles transparentes, para no confundirse con una esquina redondeada). Si ya
+viene recortada, avisa que está lista y le saca el aire de alrededor para que
+la figura ocupe todo el alto. Si todavía tiene fondo, también lo dice: la foto
+se usa igual, pero el fondo va a aparecer en la firma.
 
 ## Mantenimiento
 
@@ -93,9 +78,9 @@ Dos decisiones que vienen de ahí:
 - **Los dos teléfonos comparten una línea.** Un icono propio para el fijo no se
   distingue del celular a 15px, así que van juntos bajo el mismo icono y el
   interno queda en gris, pegado al fijo.
-- **La foto va sin máscara.** Nada de círculos ni hexágonos: al sacarle el
-  fondo, la figura se apoya directamente sobre el fondo del correo y funciona
-  igual en tema claro y en oscuro.
+- **La foto va sin máscara.** Nada de círculos ni hexágonos: si viene
+  recortada, la figura se apoya directamente sobre el fondo del correo y
+  funciona igual en tema claro y en oscuro.
 
 ## Detalles que quizá no se notan
 

@@ -121,10 +121,11 @@
   .rescate p { margin: 0; font-size: 13px; color: var(--suave); line-height: 1.55; }
   .rescate p.ojo { margin-top: 8px; color: var(--tenue); font-size: 12.5px; }
   .rescate a { color: var(--rojo); font-weight: bold; }
-  .listo-sin-fondo { margin: 0; font-size: 13px; color: var(--verde); font-weight: bold; }
+  .listo-sin-fondo { margin: 0; font-size: 13.5px; color: var(--verde); font-weight: bold; }
   .listo-sin-fondo[hidden] { display: none; }
+  .con-fondo { margin: 0; font-size: 13px; color: var(--suave); line-height: 1.5; }
+  .con-fondo[hidden] { display: none; }
   .interruptor input { width: 18px; height: 18px; accent-color: var(--rojo); cursor: pointer; }
-  #filaTolerancia[hidden] { display: none; }
   .controles { flex: 1 1 220px; display: flex; flex-direction: column; gap: 10px; }
   .controles label { margin: 0; }
   input[type=range] { width: 100%; accent-color: var(--rojo); }
@@ -232,7 +233,7 @@
     </div>
     <div class="tarjetitas suave-entrada" id="tarjetitas">
       <div class="tarjetita"><b>Dura un minuto</b>Nombre, puesto, sucursal y listo.</div>
-      <div class="tarjetita"><b>Tu foto no se sube</b>Se le saca el fondo en tu compu.</div>
+      <div class="tarjetita"><b>Tu foto no se sube</b>Se arma todo en tu propia compu.</div>
       <div class="tarjetita"><b>Anda en todos lados</b>Gmail, Outlook y Thunderbird.</div>
     </div>
   </section>
@@ -327,40 +328,32 @@
       </label>
       <label class="opcion">
         <input type="radio" name="imagen" value="foto" />
-        <span><b>Mi foto</b><i>Le sacamos el fondo acá mismo.</i></span>
+        <span><b>Mi foto</b><i>Mejor si ya viene recortada.</i></span>
       </label>
     </div>
 
     <div class="zona-foto" id="zonaFoto" hidden>
+      <div class="rescate">
+        <b>Subila sin fondo</b>
+        <p>En la firma queda mucho mejor recortada, sin el fondo de la foto. Pasala por
+        <a href="https://www.remove.bg/es/upload" target="_blank" rel="noopener noreferrer">remove.bg</a>:
+        subís tu foto, te la devuelve recortada, descargás el PNG y lo cargás acá abajo.</p>
+        <p class="ojo">Ojo: remove.bg es un servicio de afuera, así que ahí tu foto sí se sube a internet. Acá no.</p>
+      </div>
+
       <div class="soltar" id="soltar" role="button" tabindex="0" aria-label="Elegir una foto">
         <b>Arrastrá tu foto acá</b>
-        <span>o hacé clic para buscarla — JPG o PNG, de frente y con buena luz</span>
+        <span>o hacé clic para buscarla — mejor el PNG recortado</span>
       </div>
       <input type="file" id="archivo" accept="image/*" hidden />
+
       <div class="editor" id="editor">
         <div class="previsualizacion" id="previewFoto"></div>
         <div class="controles">
-          <label class="interruptor" id="filaQuitar">
-            <input type="checkbox" id="quitarFondo" checked />
-            <span>Quitar el fondo</span>
-          </label>
-          <p class="listo-sin-fondo" id="yaSinFondo" hidden>Esta foto ya viene sin fondo ✓ La usamos tal cual.</p>
-          <p class="pista" style="margin:0;">Funciona con fondos lisos, como los de las fotos de credencial.</p>
-          <div id="filaTolerancia">
-            <label for="tolerancia">Cuánto recortar</label>
-            <input type="range" id="tolerancia" min="25" max="120" value="42" />
-            <p class="pista" style="margin:4px 0 0;">Si quedan restos del fondo, subilo. Si se come parte tuya, bajalo.</p>
-          </div>
+          <p class="listo-sin-fondo" id="yaSinFondo" hidden>Esta foto ya viene sin fondo ✓</p>
+          <p class="con-fondo" id="tieneFondo" hidden>Esta foto todavía tiene fondo, y así va a aparecer en tu firma. Si querés, pasala por remove.bg y volvé a subirla.</p>
           <button type="button" class="btn secundario" id="otraFoto">Elegir otra foto</button>
         </div>
-      </div>
-      <div class="rescate" id="rescate" hidden>
-        <b>¿Te quedó mal el recorte?</b>
-        <p>Pasa seguido con fondos que tienen degradado o sombras. La salida rápida es
-        <a href="https://www.remove.bg/es/upload" target="_blank" rel="noopener noreferrer">remove.bg</a>:
-        subís la foto, te la devuelve recortada en PNG y después la cargás acá. Cuando la foto ya
-        viene sin fondo, la usamos tal cual, sin tocarla.</p>
-        <p class="ojo">Ojo: remove.bg es un servicio de afuera, así que ahí tu foto sí se sube a internet. Acá no.</p>
       </div>
     </div>
 

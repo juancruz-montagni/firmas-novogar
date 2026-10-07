@@ -58,57 +58,6 @@ function brindis(mensaje) {
   brindis._t = setTimeout(() => el.classList.remove('visible'), 2800);
 }
 
-/* -------------------------------------------------------- quitar el fondo
- *
- * No usa modelos de IA: sería bajar decenas de megas y acá no hacen falta. Las
- * fotos de credencial se sacan contra un fondo liso, así que alcanza con
- * expandir desde los bordes hacia adentro mientras el color siga pareciéndose
- * al del fondo. Al ir por vecinos y no por color suelto, una camisa blanca en
- * el centro no se borra: no está conectada con el borde de la imagen.
- */
-function quitarFondo(ctx, ancho, alto, tolerancia) {
-  const datos = ctx.getImageData(0, 0, ancho, alto);
-  const px = datos.data;
-
-  // color de referencia: promedio de las cuatro esquinas
-  const esquinas = [[0, 0], [ancho - 1, 0], [0, alto - 1], [ancho - 1, alto - 1]];
-  let r = 0, g = 0, b = 0;
-  esquinas.forEach(([x, y]) => {
-    const i = (y * ancho + x) * 4;
-    r += px[i]; g += px[i + 1]; b += px[i + 2];
-  });
-  r /= 4; g /= 4; b /= 4;
-
-  const duro = tolerancia;          // adentro de esto es fondo seguro
-  const blando = tolerancia * 1.8;  // entre los dos, se desvanece
-  const visitado = new Uint8Array(ancho * alto);
-  const pila = [];
-
-  for (let x = 0; x < ancho; x++) { pila.push(x, x + (alto - 1) * ancho); }
-  for (let y = 0; y < alto; y++) { pila.push(y * ancho, ancho - 1 + y * ancho); }
-
-  while (pila.length) {
-    const p = pila.pop();
-    if (visitado[p]) continue;
-    visitado[p] = 1;
-
-    const i = p * 4;
-    const dist = Math.sqrt((px[i] - r) ** 2 + (px[i + 1] - g) ** 2 + (px[i + 2] - b) ** 2);
-    if (dist > blando) continue;
-
-    // el borde se desvanece en vez de cortarse en escalera
-    px[i + 3] = dist <= duro ? 0 : Math.round(255 * ((dist - duro) / (blando - duro)));
-
-    const x = p % ancho, y = (p / ancho) | 0;
-    if (x > 0) pila.push(p - 1);
-    if (x < ancho - 1) pila.push(p + 1);
-    if (y > 0) pila.push(p - ancho);
-    if (y < alto - 1) pila.push(p + ancho);
-  }
-
-  ctx.putImageData(datos, 0, 0);
-}
-
 /** Caja que envuelve lo que quedó visible, para recortar el aire sobrante. */
 function cajaVisible(ctx, ancho, alto) {
   const px = ctx.getImageData(0, 0, ancho, alto).data;
@@ -130,9 +79,7 @@ function cajaVisible(ctx, ancho, alto) {
 
 const foto = {
   imagen: null,
-  quitar: true,
-  yaSinFondo: false,
-  tolerancia: 42,
+  yaSinFondo: false,  // la foto llegó con transparencia, o sea ya recortada
   ALTO: 126,          // alto final dentro de la firma
   MAX_LADO: 900,      // tope de procesamiento, para no colgar el navegador
 };
@@ -167,12 +114,9 @@ function procesarFoto(paraPreview) {
   const ctx = lienzo.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(img, 0, 0, w, h);
 
-  if (foto.quitar) quitarFondo(ctx, w, h, foto.tolerancia);
-
-  // se recorta el aire sobrante siempre que haya transparencia, la haya
-  // puesto la app o la imagen original
-  const recortar = foto.quitar || foto.yaSinFondo;
-  const caja = recortar ? cajaVisible(ctx, w, h) : { x: 0, y: 0, w, h };
+  // si viene recortada, se le saca el aire transparente de alrededor para que
+  // la figura ocupe todo el alto disponible
+  const caja = foto.yaSinFondo ? cajaVisible(ctx, w, h) : { x: 0, y: 0, w, h };
 
   // se entrega al doble del tamaño final, para que se vea nítida en retina
   const altoFinal = paraPreview ? 150 : foto.ALTO;
@@ -187,15 +131,11 @@ function procesarFoto(paraPreview) {
   return { src: salida.toDataURL('image/png'), w: Math.round(salida.width / 2), h: altoFinal };
 }
 
-let dibujarPendiente = null;
 function dibujarPreview() {
   if (!foto.imagen) return;
-  clearTimeout(dibujarPendiente);
-  dibujarPendiente = setTimeout(() => {
-    const { src, w, h } = procesarFoto(true);
-    const vista = $('#previewFoto');
-    vista.innerHTML = `<img src="${src}" alt="Tu foto" style="display:block;height:150px;width:${w}px;" />`;
-  }, 60);
+  const { src, w } = procesarFoto(true);
+  $('#previewFoto').innerHTML =
+    `<img src="${src}" alt="Tu foto" style="display:block;height:150px;width:${w}px;" />`;
 }
 
 function cargarArchivo(archivo) {
@@ -209,14 +149,8 @@ function cargarArchivo(archivo) {
     img.onload = () => {
       foto.imagen = img;
       foto.yaSinFondo = tieneTransparencia(img);
-      if (foto.yaSinFondo) {
-        foto.quitar = false;
-        $('#quitarFondo').checked = false;
-      }
-      $('#filaQuitar').hidden = foto.yaSinFondo;
       $('#yaSinFondo').hidden = !foto.yaSinFondo;
-      $('#filaTolerancia').hidden = !foto.quitar;
-      $('#rescate').hidden = foto.yaSinFondo;
+      $('#tieneFondo').hidden = foto.yaSinFondo;
       $('#soltar').hidden = true;
       $('#editor').classList.add('visible');
       dibujarPreview();
@@ -505,24 +439,11 @@ function iniciar() {
   $('#otraFoto').addEventListener('click', () => {
     foto.imagen = null;
     foto.yaSinFondo = false;
-    foto.quitar = true;
-    $('#quitarFondo').checked = true;
-    $('#filaQuitar').hidden = false;
     $('#yaSinFondo').hidden = true;
-    $('#rescate').hidden = true;
+    $('#tieneFondo').hidden = true;
     $('#editor').classList.remove('visible');
     soltar.hidden = false;
     $('#archivo').value = '';
-  });
-
-  $('#quitarFondo').addEventListener('change', (e) => {
-    foto.quitar = e.target.checked;
-    $('#filaTolerancia').hidden = !e.target.checked;
-    dibujarPreview();
-  });
-  $('#tolerancia').addEventListener('input', (e) => {
-    foto.tolerancia = Number(e.target.value);
-    dibujarPreview();
   });
 
   $$('.pestana').forEach((tab) => tab.addEventListener('click', () => {
