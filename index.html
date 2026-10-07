@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Firmas de correo · Novogar</title>
+<meta name="description" content="Generá tu firma de correo de Novogar y copiala lista para pegar." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✉️</text></svg>" />
+<style>
+  :root {
+    --rojo: #D6101E;
+    --verde: #178134;
+    --tinta: #16181B;
+    --suave: #6E737A;
+    --linea: #E2E4E8;
+    --fondo: #EFF1F3;
+    --panel: #ffffff;
+    --pila: Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'Segoe UI', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0; background: var(--fondo);
+    font-family: var(--pila); color: var(--tinta); line-height: 1.5;
+  }
+  .barra { background: var(--panel); border-bottom: 1px solid var(--linea); }
+  .barra .interior { max-width: 1120px; margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; gap: 14px; }
+  .barra img { display: block; height: 26px; width: auto; }
+  .barra h1 { font-size: 16px; margin: 0; font-weight: bold; letter-spacing: .2px; }
+  .barra p { margin: 0; font-size: 13px; color: var(--suave); }
+
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  .paso { background: var(--panel); border: 1px solid var(--linea); border-radius: 14px; padding: 24px 26px 26px; margin: 0 0 18px; }
+  .paso > h2 { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--rojo); margin: 0 0 4px; }
+  .paso > .ayuda { margin: 0 0 20px; font-size: 13px; color: var(--suave); max-width: 640px; }
+
+  .grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 20px; }
+  .campo { display: flex; flex-direction: column; gap: 6px; }
+  /* sin esto, display:flex le gana al atributo hidden y el campo se ve igual */
+  .campo[hidden] { display: none; }
+  .campo.ancho { grid-column: 1 / -1; }
+  label { font-size: 12.5px; font-weight: bold; color: #3A3F46; }
+  label .opt { font-weight: normal; color: #9BA2AA; }
+  input[type=text], input[type=email], input[type=tel], select {
+    font-family: var(--pila); font-size: 14px; color: var(--tinta);
+    padding: 10px 12px; border: 1px solid #D4D8DD; border-radius: 9px; background: #fff;
+    width: 100%; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--rojo); box-shadow: 0 0 0 3px rgba(214,16,30,.12); }
+  input[aria-invalid="true"] { border-color: var(--rojo); background: #FFF7F7; }
+  .error { font-size: 12px; color: var(--rojo); min-height: 0; }
+  .pista { font-size: 12px; color: #9BA2AA; }
+
+  .opciones { display: flex; gap: 10px; flex-wrap: wrap; }
+  .opcion { flex: 1 1 200px; position: relative; }
+  .opcion input { position: absolute; opacity: 0; pointer-events: none; }
+  .opcion span {
+    display: block; padding: 13px 15px; border: 1.5px solid #D4D8DD; border-radius: 10px;
+    font-size: 13.5px; cursor: pointer; background: #fff; transition: all .15s;
+  }
+  .opcion span b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .opcion span i { font-style: normal; color: var(--suave); font-size: 12.5px; }
+  .opcion input:checked + span { border-color: var(--rojo); background: #FFF6F7; box-shadow: 0 0 0 3px rgba(214,16,30,.1); }
+  .opcion input:focus-visible + span { box-shadow: 0 0 0 3px rgba(214,16,30,.3); }
+
+  .zona-foto { display: none; margin-top: 18px; }
+  .zona-foto.visible { display: block; }
+  .soltar {
+    border: 2px dashed #D4D8DD; border-radius: 12px; padding: 24px; text-align: center;
+    background: #FAFBFC; cursor: pointer; transition: all .15s;
+  }
+  .soltar:hover, .soltar.encima { border-color: var(--rojo); background: #FFF6F7; }
+  .soltar p { margin: 0; font-size: 13.5px; color: var(--suave); }
+  .soltar b { color: var(--tinta); }
+
+  .editor { display: none; gap: 20px; margin-top: 18px; align-items: center; flex-wrap: wrap; }
+  .editor.visible { display: flex; }
+  .editor canvas { border-radius: 50%; border: 1px solid var(--linea); cursor: grab; touch-action: none; background: #F4F6F8; }
+  .editor canvas:active { cursor: grabbing; }
+  .controles { flex: 1 1 220px; display: flex; flex-direction: column; gap: 12px; }
+  .controles label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+  input[type=range] { width: 100%; accent-color: var(--rojo); }
+
+  .btn {
+    font-family: var(--pila); font-size: 14.5px; font-weight: bold; letter-spacing: .2px;
+    padding: 13px 24px; border-radius: 10px; border: 1.5px solid transparent; cursor: pointer;
+    transition: all .15s;
+  }
+  .btn.primario { background: var(--rojo); color: #fff; }
+  .btn.primario:hover { background: #B80D19; }
+  .btn.secundario { background: #fff; color: var(--tinta); border-color: #D4D8DD; }
+  .btn.secundario:hover { border-color: #9BA2AA; }
+  .btn:focus-visible { outline: 3px solid rgba(214,16,30,.35); outline-offset: 2px; }
+  .acciones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+
+  #resultado { display: none; }
+  #resultado.visible { display: block; }
+
+  .vista { border: 1px solid var(--linea); border-radius: 12px; padding: 22px; background: #fff; overflow-x: auto; }
+  .vista.oscura { background: #1E1E1E; border-color: #2F343B; color: #E8EAED; margin-top: 12px; }
+  .etiqueta { font-size: 11px; letter-spacing: 1.1px; text-transform: uppercase; color: #9BA2AA; margin: 0 0 10px; }
+
+  .pestanas { display: flex; gap: 6px; border-bottom: 1px solid var(--linea); margin: 4px 0 18px; flex-wrap: wrap; }
+  .pestana {
+    font-family: var(--pila); font-size: 13.5px; font-weight: bold; padding: 10px 16px;
+    background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; color: var(--suave);
+  }
+  .pestana[aria-selected="true"] { color: var(--rojo); border-bottom-color: var(--rojo); }
+  .pestana:focus-visible { outline: 2px solid rgba(214,16,30,.4); border-radius: 6px 6px 0 0; }
+  .panel-pestana { display: none; font-size: 13.5px; color: #3A3F46; }
+  .panel-pestana.visible { display: block; }
+  .panel-pestana ol { margin: 0; padding-left: 20px; }
+  .panel-pestana li { margin-bottom: 9px; }
+  .panel-pestana b { color: var(--tinta); }
+
+  .aviso { font-size: 12.5px; color: var(--suave); border-left: 3px solid var(--verde); padding-left: 13px; margin-top: 20px; }
+  .aviso.alerta { border-left-color: var(--rojo); }
+
+  .brindis { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 90px);
+    background: var(--tinta); color: #fff; padding: 13px 22px; border-radius: 10px;
+    font-size: 14px; font-weight: bold; opacity: 0; transition: all .25s; pointer-events: none; z-index: 20; }
+  .brindis.visible { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 640px) {
+    main { padding: 20px 16px 50px; }
+    .paso { padding: 20px 18px 22px; border-radius: 12px; }
+    .barra .interior { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="interior">
+    <img id="logoBarra" src="" alt="Novogar" />
+    <div>
+      <h1>Generador de firmas</h1>
+      <p>Completá tus datos y llevate la firma lista para pegar.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <form id="formulario" novalidate>
+    <section class="paso">
+      <h2>1 · Tus datos</h2>
+      <p class="ayuda">Son los que van a ver tus destinatarios. El mail se completa solo a partir del nombre, pero podés corregirlo.</p>
+      <div class="grilla">
+        <div class="campo">
+          <label for="nombre">Nombre y apellido</label>
+          <input type="text" id="nombre" name="nombre" autocomplete="name" placeholder="Nombre y apellido" required />
+          <span class="error" data-error="nombre"></span>
+        </div>
+        <div class="campo">
+          <label for="puesto">Puesto</label>
+          <input type="text" id="puesto" name="puesto" autocomplete="organization-title" placeholder="Tu puesto" required />
+          <span class="error" data-error="puesto"></span>
+        </div>
+        <div class="campo ancho">
+          <label for="mail">Correo</label>
+          <input type="email" id="mail" name="mail" autocomplete="email" placeholder="nombre.apellido@novogar.com.ar" required />
+          <span class="error" data-error="mail"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="paso">
+      <h2>2 · Dónde encontrarte</h2>
+      <p class="ayuda">Al elegir la sucursal se completan solos la dirección y el teléfono fijo.</p>
+      <div class="grilla">
+        <div class="campo ancho">
+          <label for="sucursal">Sucursal</label>
+          <select id="sucursal" name="sucursal" required></select>
+          <span class="pista" id="pistaSucursal"></span>
+        </div>
+        <div class="campo" id="campoDireccion" hidden>
+          <label for="direccion">Dirección</label>
+          <input type="text" id="direccion" name="direccion" placeholder="Calle y número, localidad" />
+        </div>
+        <div class="campo">
+          <label for="celular">Celular</label>
+          <input type="tel" id="celular" name="celular" autocomplete="tel" placeholder="341 5551234" required />
+          <span class="error" data-error="celular"></span>
+        </div>
+        <div class="campo">
+          <label for="interno">Interno <span class="opt">— opcional</span></label>
+          <input type="text" id="interno" name="interno" inputmode="numeric" placeholder="123" />
+        </div>
+      </div>
+    </section>
+
+    <section class="paso">
+      <h2>3 · La imagen</h2>
+      <p class="ayuda">Podés usar el logo de Novogar o tu propia foto. Si elegís foto, usá una con la chomba o la camisa de Novogar.</p>
+      <div class="opciones">
+        <label class="opcion">
+          <input type="radio" name="imagen" value="logo" checked />
+          <span><b>El logo de Novogar</b><i>La opción segura, igual para todos.</i></span>
+        </label>
+        <label class="opcion">
+          <input type="radio" name="imagen" value="foto" />
+          <span><b>Mi foto</b><i>Se recorta en círculo. No sale de tu equipo.</i></span>
+        </label>
+      </div>
+
+      <div class="zona-foto" id="zonaFoto">
+        <div class="soltar" id="soltar" role="button" tabindex="0" aria-label="Elegir una foto">
+          <p><b>Arrastrá tu foto acá</b> o hacé clic para elegirla</p>
+          <p class="pista" style="margin-top:6px;">JPG o PNG, mejor si es de frente y con buena luz</p>
+        </div>
+        <input type="file" id="archivo" accept="image/*" hidden />
+
+        <div class="editor" id="editor">
+          <canvas id="lienzo" width="150" height="150" aria-label="Vista previa de tu foto"></canvas>
+          <div class="controles">
+            <label for="zoom">Acercar
+              <input type="range" id="zoom" min="100" max="260" value="100" />
+            </label>
+            <p class="pista" style="margin:0;">Arrastrá la foto dentro del círculo para encuadrarla.</p>
+            <button type="button" class="btn secundario" id="otraFoto">Elegir otra foto</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="acciones">
+      <button type="submit" class="btn primario">Generar mi firma</button>
+    </div>
+  </form>
+
+  <section id="resultado">
+    <section class="paso">
+      <h2>Tu firma</h2>
+      <p class="ayuda">Así se va a ver. Abajo está el mismo HTML sobre fondo oscuro, que es como la ven quienes usan tema oscuro.</p>
+      <p class="etiqueta">Fondo claro</p>
+      <div class="vista" id="vistaClara"></div>
+      <p class="etiqueta" style="margin-top:16px;">Fondo oscuro</p>
+      <div class="vista oscura" id="vistaOscura"></div>
+      <div class="acciones">
+        <button type="button" class="btn primario" id="copiar">Copiar firma</button>
+        <button type="button" class="btn secundario" id="descargar">Descargar como archivo</button>
+        <button type="button" class="btn secundario" id="volver">Cambiar mis datos</button>
+      </div>
+    </section>
+
+    <section class="paso">
+      <h2>Cómo ponerla en tu correo</h2>
+      <p class="ayuda">Elegí el programa que usás. Antes de empezar, tocá <b>Copiar firma</b> acá arriba.</p>
+      <div class="pestanas" role="tablist">
+        <button class="pestana" role="tab" data-panel="gmail" aria-selected="true">Gmail</button>
+        <button class="pestana" role="tab" data-panel="outlook" aria-selected="false">Outlook de escritorio</button>
+        <button class="pestana" role="tab" data-panel="owa" aria-selected="false">Outlook web</button>
+        <button class="pestana" role="tab" data-panel="thunderbird" aria-selected="false">Thunderbird</button>
+        <button class="pestana" role="tab" data-panel="celular" aria-selected="false">Celular</button>
+      </div>
+
+      <div class="panel-pestana visible" id="panel-gmail" role="tabpanel">
+        <ol>
+          <li>Abrí Gmail y tocá la <b>rueda dentada</b> arriba a la derecha.</li>
+          <li>Entrá en <b>Ver toda la configuración</b>.</li>
+          <li>En la pestaña <b>General</b>, bajá hasta <b>Firma</b> y tocá <b>Crear</b>. Ponele un nombre, por ejemplo "Novogar".</li>
+          <li>Hacé clic dentro del recuadro grande y pegá con <b>Ctrl+V</b>.</li>
+          <li>Más abajo, en <b>Valores predeterminados de la firma</b>, elegila para los mensajes nuevos y para las respuestas.</li>
+          <li>Bajá hasta el final y tocá <b>Guardar cambios</b>. Si no guardás, se pierde.</li>
+        </ol>
+        <p class="aviso">Gmail sube las imágenes a sus servidores cuando las pegás, así que la firma sigue funcionando siempre.</p>
+      </div>
+
+      <div class="panel-pestana" id="panel-outlook" role="tabpanel">
+        <ol>
+          <li>Andá a <b>Archivo → Opciones → Correo</b>.</li>
+          <li>Tocá el botón <b>Firmas…</b></li>
+          <li>Tocá <b>Nueva</b>, ponele un nombre y aceptá.</li>
+          <li>Hacé clic en el recuadro de abajo y pegá con <b>Ctrl+V</b>.</li>
+          <li>Arriba a la derecha, elegila en <b>Mensajes nuevos</b> y en <b>Respuestas o reenvíos</b>.</li>
+          <li>Tocá <b>Aceptar</b>.</li>
+        </ol>
+        <p class="aviso">Si al pegar se te desarma, probá con <b>Ctrl+Shift+V</b>.</p>
+      </div>
+
+      <div class="panel-pestana" id="panel-owa" role="tabpanel">
+        <ol>
+          <li>Tocá la <b>rueda dentada</b> arriba a la derecha.</li>
+          <li>Entrá en <b>Correo → Redactar y responder</b>.</li>
+          <li>En <b>Firma de correo electrónico</b>, pegá con <b>Ctrl+V</b>.</li>
+          <li>Marcá las dos casillas para que se use en mensajes nuevos y en respuestas.</li>
+          <li>Tocá <b>Guardar</b>.</li>
+        </ol>
+      </div>
+
+      <div class="panel-pestana" id="panel-thunderbird" role="tabpanel">
+        <p style="margin:0 0 14px;">Thunderbird no deja pegar la firma directamente: hay que apuntarle a un archivo. Por eso acá arriba está el botón <b>Descargar como archivo</b>.</p>
+        <ol>
+          <li>Tocá <b>Descargar como archivo</b> y guardalo en una carpeta donde no lo vayas a borrar, por ejemplo en <b>Documentos</b>. Evitá Descargas, que se suele limpiar.</li>
+          <li>En Thunderbird, abrí el menú <b>☰</b> arriba a la derecha y entrá en <b>Configuración de cuenta</b>.</li>
+          <li>En la lista de la izquierda, hacé clic sobre tu cuenta de correo (la línea de arriba de todo, la que tiene tu dirección).</li>
+          <li>Bajá hasta el final y marcá <b>Adjuntar la firma de un archivo (texto, HTML o imagen)</b>.</li>
+          <li>Tocá <b>Elegir…</b> y seleccioná el archivo que descargaste.</li>
+          <li>Cerrá la pestaña de configuración: Thunderbird guarda solo.</li>
+        </ol>
+        <p class="aviso alerta">Si después movés, renombrás o borrás ese archivo, la firma deja de aparecer. Thunderbird no se queda con una copia: lo lee cada vez que escribís un correo.</p>
+      </div>
+
+      <div class="panel-pestana" id="panel-celular" role="tabpanel">
+        <p>Las aplicaciones de correo del celular casi nunca aceptan firmas con imágenes: suelen dejar sólo el texto.</p>
+        <ol>
+          <li>Lo más práctico es configurarla desde la computadora. Si usás Gmail en Android, la firma del celular es distinta de la de la web y hay que cargarla aparte.</li>
+          <li>Si igual querés hacerlo en el celular, usá <b>Descargar como archivo</b>, abrilo, copiá todo y pegalo en la configuración de firma de tu app.</li>
+        </ol>
+        <p class="aviso alerta">Si al pegar en el celular se pierde el logo o la foto, no está fallando la firma: es la app, que no soporta imágenes.</p>
+      </div>
+    </section>
+  </section>
+</main>
+
+<div class="brindis" id="brindis" role="status" aria-live="polite"></div>
+
+<script src="assets.js"></script>
+<script src="sucursales.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
