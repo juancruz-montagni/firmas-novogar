@@ -245,8 +245,8 @@ function pasoValido(paso) {
   }
 }
 
-function irA(destino) {
-  if (destino > pasoActual) {
+function irA(destino, saltarValidacion) {
+  if (destino > pasoActual && !saltarValidacion) {
     for (let p = pasoActual; p < destino; p++) {
       if (!pasoValido(p)) {
         const malo = document.querySelector('[aria-invalid="true"]');
@@ -261,8 +261,21 @@ function irA(destino) {
   siguiente.classList.add('activa');
   pasoActual = destino;
 
-  $('#barraProgreso').style.width = (destino / ULTIMO_PASO * 100) + '%';
-  $('#cuentaPasos').textContent = destino === 0 ? ''
+  // al último paso se puede llegar de dos maneras: terminando el formulario, o
+  // por el atajo de quien ya tiene su firma y sólo viene a buscar el instructivo
+  if (destino === ULTIMO_PASO) {
+    const hayFirma = Boolean(firmaActual);
+    $('#bloqueFirma').hidden = !hayFirma;
+    $('#navSinFirma').hidden = hayFirma;
+    $('#tituloInstrucciones').textContent = hayFirma
+      ? 'Cómo ponerla en tu correo'
+      : 'Cómo poner tu firma en el correo';
+    $('#avisoCopiar').hidden = !hayFirma;
+  }
+
+  $('#barraProgreso').style.width = (destino === ULTIMO_PASO && !firmaActual)
+    ? '0%' : (destino / ULTIMO_PASO * 100) + '%';
+  $('#cuentaPasos').textContent = destino === 0 || (destino === ULTIMO_PASO && !firmaActual) ? ''
     : destino === ULTIMO_PASO ? 'Listo' : `Paso ${destino} de 6`;
 
   window.scrollTo({ top: 0, behavior: sinMovimiento() ? 'auto' : 'smooth' });
@@ -387,6 +400,7 @@ function iniciar() {
   });
 
   $$('[data-ir]').forEach((b) => b.addEventListener('click', () => irA(Number(b.dataset.ir))));
+  $('#soloInstrucciones').addEventListener('click', () => irA(ULTIMO_PASO, true));
   $('#generar').addEventListener('click', generar);
   $('#copiar').addEventListener('click', copiar);
   $('#descargar').addEventListener('click', descargar);

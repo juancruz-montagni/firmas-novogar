@@ -182,6 +182,7 @@
   .aviso { font-size: 13px; color: var(--suave); border-left: 3px solid var(--verde); padding-left: 14px; margin-top: 18px; }
   .aviso.alerta { border-left-color: var(--rojo); }
 
+  #bloqueFirma[hidden], #navSinFirma[hidden], #avisoCopiar[hidden] { display: none; }
   .brindis {
     position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, 100px);
     background: var(--tinta); color: #fff; padding: 14px 24px; border-radius: 11px;
@@ -237,6 +238,7 @@
     <p class="detalle suave-entrada" id="subtitulo">Son seis preguntas cortas. Al final te la copiás y la pegás en tu correo.</p>
     <div class="navegacion suave-entrada" id="navBienvenida" style="margin-top:8px;">
       <button type="button" class="btn primario grande" data-ir="1">Empecemos</button>
+      <button type="button" class="btn fantasma" id="soloInstrucciones">Ya tengo mi firma, ¿cómo la instalo?</button>
     </div>
     <div class="tarjetitas suave-entrada" id="tarjetitas">
       <div class="tarjetita"><b>Dura un minuto</b>Nombre, puesto, sucursal y listo.</div>
@@ -367,6 +369,7 @@
   </section>
 
   <section class="pantalla" data-paso="7">
+    <div id="bloqueFirma">
     <p class="festejo">Lista ✓</p>
     <h2 class="pregunta">Esta es tu firma</h2>
 
@@ -382,10 +385,11 @@
       <button type="button" class="btn secundario" id="descargar">Descargar archivo</button>
       <button type="button" class="btn fantasma" data-ir="1">Cambiar mis datos</button>
     </div>
+    </div>
 
-    <div style="margin-top:44px;">
-      <h2 class="pregunta" style="font-size:21px;">Cómo ponerla en tu correo</h2>
-      <p class="detalle">Elegí tu programa. Antes de empezar, tocá <b>Copiar firma</b>.</p>
+    <div id="bloqueInstrucciones" style="margin-top:44px;">
+      <h2 class="pregunta" id="tituloInstrucciones" style="font-size:21px;">Cómo ponerla en tu correo</h2>
+      <p class="detalle" id="avisoCopiar">Elegí tu programa. Antes de empezar, tocá <b>Copiar firma</b>.</p>
       <div class="pestanas" role="tablist">
         <button class="pestana" role="tab" data-panel="gmail" aria-selected="true">Gmail</button>
         <button class="pestana" role="tab" data-panel="outlook" aria-selected="false">Outlook de escritorio</button>
@@ -448,6 +452,9 @@
           <li>Si igual querés hacerlo en el celular, usá <b>Descargar archivo</b>, abrilo, copiá todo y pegalo en la configuración de firma de tu app.</li>
         </ol>
         <p class="aviso alerta">Si al pegar en el celular se pierde el logo o la foto, no está fallando la firma: es la app, que no soporta imágenes.</p>
+      </div>
+      <div class="navegacion" id="navSinFirma" hidden>
+        <button type="button" class="btn primario" data-ir="1">Crear mi firma</button>
       </div>
     </div>
   </section>
