@@ -1,20 +1,22 @@
 /* Generador de firmas de Novogar.
  *
- * Todo pasa en el navegador: la foto se lee con FileReader, se recorta en un
+ * Todo pasa en el navegador: la foto se lee con FileReader, se procesa en un
  * canvas y se mete en la firma como data URI. No se sube nada a ningún lado.
  *
  * La firma se arma con tablas y estilos en línea porque Outlook usa el motor
- * de Word, que ignora flexbox, grid y casi todo el CSS moderno. El nombre y el
- * puesto van como TEXTO, sin color propio, para que hereden el del cliente y
- * se lean igual en tema claro y en tema oscuro.
+ * de Word, que ignora flexbox, border-radius y letter-spacing. El nombre y el
+ * puesto van como TEXTO sin color propio, para que hereden el del cliente y se
+ * lean igual en tema claro y en tema oscuro.
  */
 
 const PILA = "Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'Segoe UI', Arial, sans-serif";
 const GRIS_SUAVE = '#8A9099';   // legible sobre blanco y sobre negro
 const MAIL_DOMINIO = '@novogar.com.ar';
+const ULTIMO_PASO = 7;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const sinMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------------------------------------------------------------- utilidades */
 
@@ -24,8 +26,8 @@ function escaparHtml(texto) {
   ));
 }
 
-/** Deja sólo dígitos y arma el tel: en formato internacional argentino.
- *  Los móviles llevan el 9 después del 54; los fijos, no. */
+/** Deja sólo dígitos y arma el tel: internacional.
+ *  Los móviles argentinos llevan el 9 después del 54; los fijos, no. */
 function enlaceTelefono(numero, esMovil) {
   let d = String(numero).replace(/\D/g, '');
   if (d.startsWith('54')) d = d.slice(2);
@@ -43,124 +45,135 @@ function sugerirMail(nombreCompleto) {
   if (!limpio) return '';
   const partes = limpio.split(' ');
   if (partes.length === 1) return partes[0] + MAIL_DOMINIO;
-  const nombre = partes.slice(0, partes.length - 1).join('');
-  return nombre + '.' + partes[partes.length - 1] + MAIL_DOMINIO;
+  return partes.slice(0, -1).join('') + '.' + partes[partes.length - 1] + MAIL_DOMINIO;
 }
 
-function mapsLink(direccion) {
-  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(direccion + ', Novogar');
-}
+const mapsLink = (dir) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(dir + ', Novogar');
 
 function brindis(mensaje) {
   const el = $('#brindis');
   el.textContent = mensaje;
   el.classList.add('visible');
   clearTimeout(brindis._t);
-  brindis._t = setTimeout(() => el.classList.remove('visible'), 2600);
+  brindis._t = setTimeout(() => el.classList.remove('visible'), 2800);
 }
 
-/* ------------------------------------------------------------ armado de firma */
+/* -------------------------------------------------------- quitar el fondo
+ *
+ * No usa modelos de IA: sería bajar decenas de megas y acá no hacen falta. Las
+ * fotos de credencial se sacan contra un fondo liso, así que alcanza con
+ * expandir desde los bordes hacia adentro mientras el color siga pareciéndose
+ * al del fondo. Al ir por vecinos y no por color suelto, una camisa blanca en
+ * el centro no se borra: no está conectada con el borde de la imagen.
+ */
+function quitarFondo(ctx, ancho, alto, tolerancia) {
+  const datos = ctx.getImageData(0, 0, ancho, alto);
+  const px = datos.data;
 
-function filaContacto(icono, contenido, primera) {
-  const pad = primera ? 0 : 4;
-  return `<tr>
-    <td style="padding:${pad}px 9px 0 0;vertical-align:top;line-height:0;"><img src="${icono}" width="15" height="15" alt="" style="display:block;width:15px;height:15px;border:0;margin-top:2px;" /></td>
-    <td style="padding:${pad}px 0 0 0;vertical-align:top;font-family:${PILA};font-size:13px;line-height:19px;">${contenido}</td>
-  </tr>`;
-}
+  // color de referencia: promedio de las cuatro esquinas
+  const esquinas = [[0, 0], [ancho - 1, 0], [0, alto - 1], [ancho - 1, alto - 1]];
+  let r = 0, g = 0, b = 0;
+  esquinas.forEach(([x, y]) => {
+    const i = (y * ancho + x) * 4;
+    r += px[i]; g += px[i + 1]; b += px[i + 2];
+  });
+  r /= 4; g /= 4; b /= 4;
 
-function enlace(texto, href) {
-  return `<a href="${href}" style="color:inherit;text-decoration:none;">${escaparHtml(texto)}</a>`;
-}
+  const duro = tolerancia;          // adentro de esto es fondo seguro
+  const blando = tolerancia * 1.8;  // entre los dos, se desvanece
+  const visitado = new Uint8Array(ancho * alto);
+  const pila = [];
 
-function construirFirma(datos) {
-  const ic = ASSETS.iconos;
+  for (let x = 0; x < ancho; x++) { pila.push(x, x + (alto - 1) * ancho); }
+  for (let y = 0; y < alto; y++) { pila.push(y * ancho, ancho - 1 + y * ancho); }
 
-  let telefonos = enlace(datos.celular, enlaceTelefono(datos.celular, true));
-  if (datos.fijo) {
-    const interno = datos.interno
-      ? `<span style="color:${GRIS_SUAVE};">&nbsp;Int: ${escaparHtml(datos.interno)}</span>` : '';
-    let href = enlaceTelefono(datos.fijo, false);
-    if (datos.interno) href += ',,' + String(datos.interno).replace(/\D/g, '');
-    telefonos += `<span style="color:${GRIS_SUAVE};">&nbsp;&nbsp;|&nbsp;&nbsp;</span>`
-      + `<a href="${href}" style="color:inherit;text-decoration:none;">${escaparHtml(datos.fijo)}${interno}</a>`;
-  } else if (datos.interno) {
-    telefonos += `<span style="color:${GRIS_SUAVE};">&nbsp;&nbsp;|&nbsp;&nbsp;Int: ${escaparHtml(datos.interno)}</span>`;
+  while (pila.length) {
+    const p = pila.pop();
+    if (visitado[p]) continue;
+    visitado[p] = 1;
+
+    const i = p * 4;
+    const dist = Math.sqrt((px[i] - r) ** 2 + (px[i + 1] - g) ** 2 + (px[i + 2] - b) ** 2);
+    if (dist > blando) continue;
+
+    // el borde se desvanece en vez de cortarse en escalera
+    px[i + 3] = dist <= duro ? 0 : Math.round(255 * ((dist - duro) / (blando - duro)));
+
+    const x = p % ancho, y = (p / ancho) | 0;
+    if (x > 0) pila.push(p - 1);
+    if (x < ancho - 1) pila.push(p + 1);
+    if (y > 0) pila.push(p - ancho);
+    if (y < alto - 1) pila.push(p + ancho);
   }
 
-  const filas = [
-    filaContacto(ic.tel, telefonos, true),
-    filaContacto(ic.mail, enlace(datos.mail, 'mailto:' + datos.mail)),
-    datos.direccion ? filaContacto(ic.pin, enlace(datos.direccion, mapsLink(datos.direccion))) : '',
-  ].join('');
-
-  const img = datos.imagen;
-  const celdaImagen = `<td style="padding:0 20px 0 0;vertical-align:middle;">`
-    + `<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${escaparHtml(datos.nombre)}" `
-    + `style="display:block;width:${img.w}px;height:${img.h}px;border:0;" /></td>`;
-
-  return `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
-  <tr>
-    ${celdaImagen}
-    <td style="padding:0;vertical-align:middle;">
-      <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
-        <tr><td style="padding:0 0 1px 0;font-family:${PILA};font-size:20px;line-height:26px;font-weight:bold;letter-spacing:.2px;">${escaparHtml(datos.nombre)}</td></tr>
-        <tr><td style="padding:0 0 12px 0;font-family:${PILA};font-size:13.5px;line-height:18px;color:${GRIS_SUAVE};">${escaparHtml(datos.puesto)}</td></tr>
-        <tr><td style="padding:0;">
-          <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">${filas}</table>
-        </td></tr>
-      </table>
-    </td>
-  </tr>
-</table>`;
+  ctx.putImageData(datos, 0, 0);
 }
 
-/* --------------------------------------------------------------- la foto */
+/** Caja que envuelve lo que quedó visible, para recortar el aire sobrante. */
+function cajaVisible(ctx, ancho, alto) {
+  const px = ctx.getImageData(0, 0, ancho, alto).data;
+  let x0 = ancho, y0 = alto, x1 = -1, y1 = -1;
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      if (px[(y * ancho + x) * 4 + 3] > 12) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  return x1 < 0 ? { x: 0, y: 0, w: ancho, h: alto } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+/* ------------------------------------------------------------------- la foto */
 
 const foto = {
   imagen: null,
-  zoom: 1,
-  x: 0.5,          // centro del encuadre, en proporción de la imagen
-  y: 0.45,
-  LADO: 126,       // tamaño final de la foto en la firma
+  quitar: true,
+  tolerancia: 60,
+  ALTO: 126,          // alto final dentro de la firma
+  MAX_LADO: 900,      // tope de procesamiento, para no colgar el navegador
 };
 
-function dibujarFoto() {
-  const lienzo = $('#lienzo');
-  const ctx = lienzo.getContext('2d');
-  const L = lienzo.width;
-  ctx.clearRect(0, 0, L, L);
-  if (!foto.imagen) return;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(L / 2, L / 2, L / 2, 0, Math.PI * 2);
-  ctx.clip();
-
+/** Procesa la foto y devuelve {src, w, h} lista para la firma. */
+function procesarFoto(paraPreview) {
   const img = foto.imagen;
-  const escala = (L / Math.min(img.width, img.height)) * foto.zoom;
-  const ancho = img.width * escala;
-  const alto = img.height * escala;
-  ctx.drawImage(img, L / 2 - ancho * foto.x, L / 2 - alto * foto.y, ancho, alto);
-  ctx.restore();
+  const escala = Math.min(1, foto.MAX_LADO / Math.max(img.width, img.height));
+  const w = Math.round(img.width * escala);
+  const h = Math.round(img.height * escala);
+
+  const lienzo = document.createElement('canvas');
+  lienzo.width = w; lienzo.height = h;
+  const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+
+  if (foto.quitar) quitarFondo(ctx, w, h, foto.tolerancia);
+
+  const caja = foto.quitar ? cajaVisible(ctx, w, h) : { x: 0, y: 0, w, h };
+
+  // se entrega al doble del tamaño final, para que se vea nítida en retina
+  const altoFinal = paraPreview ? 150 : foto.ALTO;
+  const factor = (altoFinal * 2) / caja.h;
+  const salida = document.createElement('canvas');
+  salida.width = Math.round(caja.w * factor);
+  salida.height = altoFinal * 2;
+  const sctx = salida.getContext('2d');
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(lienzo, caja.x, caja.y, caja.w, caja.h, 0, 0, salida.width, salida.height);
+
+  return { src: salida.toDataURL('image/png'), w: Math.round(salida.width / 2), h: altoFinal };
 }
 
-/** Devuelve la foto recortada en círculo, al doble de resolución. */
-function fotoRecortada() {
-  const L = foto.LADO * 2;
-  const lienzo = document.createElement('canvas');
-  lienzo.width = L; lienzo.height = L;
-  const ctx = lienzo.getContext('2d');
-  ctx.beginPath();
-  ctx.arc(L / 2, L / 2, L / 2, 0, Math.PI * 2);
-  ctx.clip();
-
-  const img = foto.imagen;
-  const escala = (L / Math.min(img.width, img.height)) * foto.zoom;
-  const ancho = img.width * escala;
-  const alto = img.height * escala;
-  ctx.drawImage(img, L / 2 - ancho * foto.x, L / 2 - alto * foto.y, ancho, alto);
-  return { src: lienzo.toDataURL('image/png'), w: foto.LADO, h: foto.LADO };
+let dibujarPendiente = null;
+function dibujarPreview() {
+  if (!foto.imagen) return;
+  clearTimeout(dibujarPendiente);
+  dibujarPendiente = setTimeout(() => {
+    const { src, w, h } = procesarFoto(true);
+    const vista = $('#previewFoto');
+    vista.innerHTML = `<img src="${src}" alt="Tu foto" style="display:block;height:150px;width:${w}px;" />`;
+  }, 60);
 }
 
 function cargarArchivo(archivo) {
@@ -173,11 +186,9 @@ function cargarArchivo(archivo) {
     const img = new Image();
     img.onload = () => {
       foto.imagen = img;
-      foto.zoom = 1; foto.x = 0.5; foto.y = 0.45;
-      $('#zoom').value = 100;
-      $('#soltar').style.display = 'none';
+      $('#soltar').hidden = true;
       $('#editor').classList.add('visible');
-      dibujarFoto();
+      dibujarPreview();
     };
     img.onerror = () => brindis('No pude abrir esa imagen');
     img.src = ev.target.result;
@@ -186,7 +197,58 @@ function cargarArchivo(archivo) {
   lector.readAsDataURL(archivo);
 }
 
-/* ------------------------------------------------------------- validación */
+/* ------------------------------------------------------------ armado de firma */
+
+function filaContacto(icono, contenido, primera) {
+  const pad = primera ? 0 : 4;
+  return `<tr>
+    <td style="padding:${pad}px 9px 0 0;vertical-align:top;line-height:0;"><img src="${icono}" width="15" height="15" alt="" style="display:block;width:15px;height:15px;border:0;margin-top:2px;" /></td>
+    <td style="padding:${pad}px 0 0 0;vertical-align:top;font-family:${PILA};font-size:13px;line-height:19px;">${contenido}</td>
+  </tr>`;
+}
+
+const enlace = (texto, href) => `<a href="${href}" style="color:inherit;text-decoration:none;">${escaparHtml(texto)}</a>`;
+
+function construirFirma(d) {
+  const ic = ASSETS.iconos;
+
+  let telefonos = enlace(d.celular, enlaceTelefono(d.celular, true));
+  if (d.fijo) {
+    const interno = d.interno ? `<span style="color:${GRIS_SUAVE};">&nbsp;Int: ${escaparHtml(d.interno)}</span>` : '';
+    let href = enlaceTelefono(d.fijo, false);
+    if (d.interno) href += ',,' + String(d.interno).replace(/\D/g, '');
+    telefonos += `<span style="color:${GRIS_SUAVE};">&nbsp;&nbsp;|&nbsp;&nbsp;</span>`
+      + `<a href="${href}" style="color:inherit;text-decoration:none;">${escaparHtml(d.fijo)}${interno}</a>`;
+  } else if (d.interno) {
+    telefonos += `<span style="color:${GRIS_SUAVE};">&nbsp;&nbsp;|&nbsp;&nbsp;Int: ${escaparHtml(d.interno)}</span>`;
+  }
+
+  const filas = [
+    filaContacto(ic.tel, telefonos, true),
+    filaContacto(ic.mail, enlace(d.mail, 'mailto:' + d.mail)),
+    d.direccion ? filaContacto(ic.pin, enlace(d.direccion, mapsLink(d.direccion))) : '',
+  ].join('');
+
+  const img = d.imagen;
+  return `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+  <tr>
+    <td style="padding:0 20px 0 0;vertical-align:middle;"><img src="${img.src}" width="${img.w}" height="${img.h}" alt="${escaparHtml(d.nombre)}" style="display:block;width:${img.w}px;height:${img.h}px;border:0;" /></td>
+    <td style="padding:0;vertical-align:middle;">
+      <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+        <tr><td style="padding:0 0 1px 0;font-family:${PILA};font-size:20px;line-height:26px;font-weight:bold;letter-spacing:.2px;">${escaparHtml(d.nombre)}</td></tr>
+        <tr><td style="padding:0 0 12px 0;font-family:${PILA};font-size:13.5px;line-height:18px;color:${GRIS_SUAVE};">${escaparHtml(d.puesto)}</td></tr>
+        <tr><td style="padding:0;">
+          <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">${filas}</table>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+}
+
+/* ----------------------------------------------------------- navegación */
+
+let pasoActual = 0;
 
 function marcarError(campo, mensaje) {
   const input = document.getElementById(campo);
@@ -196,27 +258,142 @@ function marcarError(campo, mensaje) {
   return !mensaje;
 }
 
-function validar() {
-  let ok = true;
-  const nombre = $('#nombre').value.trim();
-  ok = marcarError('nombre', nombre.length < 3 ? 'Escribí tu nombre y apellido' : '') && ok;
-  ok = marcarError('puesto', $('#puesto').value.trim() ? '' : 'Falta el puesto') && ok;
-
-  const mail = $('#mail').value.trim();
-  const mailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
-  ok = marcarError('mail', mailOk ? '' : 'Revisá el correo') && ok;
-
-  const cel = $('#celular').value.replace(/\D/g, '');
-  ok = marcarError('celular', cel.length >= 8 ? '' : 'Revisá el celular') && ok;
-
-  if (!ok) {
-    const primero = document.querySelector('[aria-invalid="true"]');
-    if (primero) { primero.focus(); primero.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+/** Valida sólo lo que corresponde al paso que se está dejando. */
+function pasoValido(paso) {
+  switch (paso) {
+    case 1:
+      return marcarError('nombre', $('#nombre').value.trim().length < 3 ? 'Escribí tu nombre y apellido' : '');
+    case 2:
+      return marcarError('puesto', $('#puesto').value.trim() ? '' : 'Falta tu puesto');
+    case 3:
+      return marcarError('mail', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($('#mail').value.trim()) ? '' : 'Revisá el correo');
+    case 4: {
+      const v = $('#sucursal').value;
+      if (!v) return marcarError('sucursal', 'Elegí una sucursal');
+      if (v === 'otra' && !$('#direccion').value.trim()) return marcarError('sucursal', 'Escribí la dirección');
+      return marcarError('sucursal', '');
+    }
+    case 5:
+      return marcarError('celular', $('#celular').value.replace(/\D/g, '').length >= 8 ? '' : 'Revisá el celular');
+    default:
+      return true;
   }
-  return ok;
 }
 
-/* ------------------------------------------------------------------ eventos */
+function irA(destino) {
+  if (destino > pasoActual) {
+    for (let p = pasoActual; p < destino; p++) {
+      if (!pasoValido(p)) {
+        const malo = document.querySelector('[aria-invalid="true"]');
+        if (malo) malo.focus();
+        return;
+      }
+    }
+  }
+
+  $$('.pantalla').forEach((s) => s.classList.remove('activa'));
+  const siguiente = document.querySelector(`.pantalla[data-paso="${destino}"]`);
+  siguiente.classList.add('activa');
+  pasoActual = destino;
+
+  $('#barraProgreso').style.width = (destino / ULTIMO_PASO * 100) + '%';
+  $('#cuentaPasos').textContent = destino === 0 ? ''
+    : destino === ULTIMO_PASO ? 'Listo' : `Paso ${destino} de 6`;
+
+  window.scrollTo({ top: 0, behavior: sinMovimiento() ? 'auto' : 'smooth' });
+  const primero = siguiente.querySelector('input:not([type=hidden]):not([type=radio]):not([type=file]), select');
+  if (primero && destino > 0 && destino < ULTIMO_PASO) {
+    setTimeout(() => primero.focus({ preventScroll: true }), sinMovimiento() ? 0 : 320);
+  }
+}
+
+/* ------------------------------------------------------------- resultado */
+
+let firmaActual = '';
+
+function generar() {
+  for (let p = 1; p <= 5; p++) {
+    if (!pasoValido(p)) { irA(p); return; }
+  }
+
+  const usarFoto = document.querySelector('input[name=imagen]:checked').value === 'foto';
+  if (usarFoto && !foto.imagen) {
+    brindis('Elegí una foto o volvé a la opción del logo');
+    return;
+  }
+
+  const v = $('#sucursal').value;
+  const suc = (v && v !== 'otra') ? SUCURSALES[Number(v)] : null;
+  const direccion = suc ? `${suc.direccion}, ${suc.nombre}, ${suc.provincia}` : $('#direccion').value.trim();
+
+  firmaActual = construirFirma({
+    nombre: $('#nombre').value.trim(),
+    puesto: $('#puesto').value.trim(),
+    mail: $('#mail').value.trim(),
+    celular: $('#celular').value.trim(),
+    fijo: suc ? suc.telefono : '',
+    interno: $('#interno').value.trim(),
+    direccion,
+    imagen: usarFoto ? procesarFoto(false) : ASSETS.logoVertical,
+  });
+
+  $('#vistaClara').innerHTML = firmaActual;
+  $('#vistaOscura').innerHTML = firmaActual;
+  irA(ULTIMO_PASO);
+}
+
+async function copiar() {
+  if (!firmaActual) return;
+  try {
+    // text/html para que al pegar conserve el formato; text/plain es el
+    // respaldo para los campos que no aceptan HTML
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([firmaActual], { type: 'text/html' }),
+      'text/plain': new Blob([$('#vistaClara').innerText], { type: 'text/plain' }),
+    })]);
+    brindis('Firma copiada ✓  Pegala con Ctrl+V');
+  } catch (e) {
+    const rango = document.createRange();
+    rango.selectNodeContents($('#vistaClara'));
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(rango);
+    try {
+      document.execCommand('copy');
+      brindis('Firma copiada ✓  Pegala con Ctrl+V');
+    } catch (_) {
+      brindis('Tu navegador no deja copiar solo: ya te la seleccioné, usá Ctrl+C');
+    }
+  }
+}
+
+function descargar() {
+  if (!firmaActual) return;
+  const pagina = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8" /><title>Mi firma · Novogar</title></head>
+<body style="margin:0;padding:28px;font-family:${PILA};">
+<p style="font-size:13px;color:#6E737A;max-width:640px;">Seleccioná la firma de abajo con el mouse, copiala con Ctrl+C y pegala en la configuración de firma de tu correo. Si usás Thunderbird, no copies nada: apuntale a este mismo archivo.</p>
+<hr style="border:none;border-top:1px solid #E2E4E8;margin:18px 0;" />
+${firmaActual}
+</body></html>`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([pagina], { type: 'text/html;charset=utf-8' }));
+  a.download = 'firma-novogar.html';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  brindis('Archivo descargado');
+}
+
+/* --------------------------------------------------------------- arranque */
+
+function tipear(texto, destino, alTerminar) {
+  if (sinMovimiento()) { destino.textContent = texto; alTerminar(); return; }
+  let i = 0;
+  (function paso() {
+    destino.textContent = texto.slice(0, ++i);
+    if (i < texto.length) setTimeout(paso, texto[i - 1] === ',' ? 180 : 42);
+    else setTimeout(alTerminar, 380);
+  })();
+}
 
 function poblarSucursales() {
   const select = $('#sucursal');
@@ -233,118 +410,51 @@ function poblarSucursales() {
   select.appendChild(otra);
 }
 
-function sucursalElegida() {
-  const v = $('#sucursal').value;
-  const campo = $('#campoDireccion');
-  const pista = $('#pistaSucursal');
-  if (v === 'otra') {
-    campo.hidden = false;
-    pista.textContent = 'Escribí la dirección como querés que aparezca.';
-    return null;
-  }
-  campo.hidden = true;
-  if (v === '') { pista.textContent = ''; return null; }
-  const s = SUCURSALES[Number(v)];
-  pista.textContent = s.telefono ? `Teléfono de la sucursal: ${s.telefono}` : '';
-  return s;
-}
-
-let firmaActual = '';
-
-function generar() {
-  if (!validar()) return;
-
-  const s = sucursalElegida();
-  const usarFoto = document.querySelector('input[name=imagen]:checked').value === 'foto';
-
-  if (usarFoto && !foto.imagen) {
-    brindis('Elegí una foto o cambiá a la opción del logo');
-    $('#soltar').scrollIntoView({ block: 'center', behavior: 'smooth' });
-    return;
-  }
-
-  let direccion = '';
-  if (s) direccion = `${s.direccion}, ${s.nombre}, ${s.provincia}`;
-  else if ($('#sucursal').value === 'otra') direccion = $('#direccion').value.trim();
-
-  const datos = {
-    nombre: $('#nombre').value.trim(),
-    puesto: $('#puesto').value.trim(),
-    mail: $('#mail').value.trim(),
-    celular: $('#celular').value.trim(),
-    fijo: s ? s.telefono : '',
-    interno: $('#interno').value.trim(),
-    direccion,
-    imagen: usarFoto ? fotoRecortada() : ASSETS.logoVertical,
-  };
-
-  firmaActual = construirFirma(datos);
-  $('#vistaClara').innerHTML = firmaActual;
-  $('#vistaOscura').innerHTML = firmaActual;
-  $('#resultado').classList.add('visible');
-  $('#resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-async function copiar() {
-  if (!firmaActual) return;
-  try {
-    // Se copia como text/html para que al pegar mantenga el formato. El
-    // text/plain es el respaldo para los campos que no aceptan HTML.
-    const texto = $('#vistaClara').innerText;
-    await navigator.clipboard.write([new ClipboardItem({
-      'text/html': new Blob([firmaActual], { type: 'text/html' }),
-      'text/plain': new Blob([texto], { type: 'text/plain' }),
-    })]);
-    brindis('Firma copiada ✓  Ahora pegala con Ctrl+V');
-  } catch (e) {
-    // Safari viejo y algunos navegadores no tienen ClipboardItem: se
-    // selecciona la vista previa para que el usuario copie a mano.
-    const rango = document.createRange();
-    rango.selectNodeContents($('#vistaClara'));
-    const sel = window.getSelection();
-    sel.removeAllRanges(); sel.addRange(rango);
-    try {
-      document.execCommand('copy');
-      brindis('Firma copiada ✓  Ahora pegala con Ctrl+V');
-    } catch (_) {
-      brindis('Tu navegador no deja copiar solo: ya te la seleccioné, usá Ctrl+C');
-    }
-  }
-}
-
-function descargar() {
-  if (!firmaActual) return;
-  const pagina = `<!DOCTYPE html>
-<html lang="es"><head><meta charset="utf-8" /><title>Mi firma · Novogar</title></head>
-<body style="margin:0;padding:28px;font-family:${PILA};">
-<p style="font-size:13px;color:#6E737A;max-width:640px;">Seleccioná la firma de abajo con el mouse, copiala con Ctrl+C y pegala en la configuración de firma de tu correo.</p>
-<hr style="border:none;border-top:1px solid #E2E4E8;margin:18px 0;" />
-${firmaActual}
-</body></html>`;
-  const blob = new Blob([pagina], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'firma-novogar.html';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  brindis('Archivo descargado');
-}
-
 function iniciar() {
   $('#logoBarra').src = ASSETS.logoHorizontal.src;
   poblarSucursales();
 
-  // el mail se sugiere mientras se escribe el nombre, salvo que ya lo hayan tocado
+  tipear('Hola, vamos a generar tu firma…', $('#tipeo'), () => {
+    $('#cursor').classList.add('apagado');
+    ['#subtitulo', '#navBienvenida', '#tarjetitas'].forEach((sel, i) => {
+      setTimeout(() => $(sel).classList.add('visible'), i * 130);
+    });
+  });
+
+  $$('[data-ir]').forEach((b) => b.addEventListener('click', () => irA(Number(b.dataset.ir))));
+  $('#generar').addEventListener('click', generar);
+  $('#copiar').addEventListener('click', copiar);
+  $('#descargar').addEventListener('click', descargar);
+
+  // Enter avanza al paso siguiente
+  $$('input').forEach((input) => input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (pasoActual === 6) generar();
+    else if (pasoActual < 6) irA(pasoActual + 1);
+  }));
+
   let mailTocado = false;
   $('#mail').addEventListener('input', () => { mailTocado = true; });
   $('#nombre').addEventListener('input', (e) => {
     if (!mailTocado) $('#mail').value = sugerirMail(e.target.value);
   });
 
-  $('#sucursal').addEventListener('change', sucursalElegida);
+  $('#sucursal').addEventListener('change', () => {
+    const v = $('#sucursal').value;
+    $('#campoDireccion').hidden = v !== 'otra';
+    const pista = $('#pistaSucursal');
+    if (v === 'otra') pista.textContent = 'Escribí la dirección como querés que aparezca.';
+    else if (!v) pista.textContent = '';
+    else {
+      const s = SUCURSALES[Number(v)];
+      pista.textContent = s.telefono ? `Teléfono de la sucursal: ${s.telefono}` : 'Esta sucursal no tiene fijo cargado.';
+    }
+    marcarError('sucursal', '');
+  });
 
   $$('input[name=imagen]').forEach((r) => r.addEventListener('change', () => {
-    $('#zonaFoto').classList.toggle('visible', r.value === 'foto' && r.checked);
+    $('#zonaFoto').hidden = !(r.value === 'foto' && r.checked);
   }));
 
   const soltar = $('#soltar');
@@ -360,48 +470,22 @@ function iniciar() {
   }));
   soltar.addEventListener('drop', (e) => cargarArchivo(e.dataTransfer.files[0]));
   $('#archivo').addEventListener('change', (e) => cargarArchivo(e.target.files[0]));
+
   $('#otraFoto').addEventListener('click', () => {
     foto.imagen = null;
     $('#editor').classList.remove('visible');
-    soltar.style.display = '';
+    soltar.hidden = false;
     $('#archivo').value = '';
   });
 
-  $('#zoom').addEventListener('input', (e) => {
-    foto.zoom = Number(e.target.value) / 100;
-    dibujarFoto();
+  $('#quitarFondo').addEventListener('change', (e) => {
+    foto.quitar = e.target.checked;
+    $('#filaTolerancia').hidden = !e.target.checked;
+    dibujarPreview();
   });
-
-  // arrastrar para encuadrar, con mouse o con el dedo
-  const lienzo = $('#lienzo');
-  let arrastrando = false, ultimo = null;
-  const mover = (e) => {
-    if (!arrastrando || !foto.imagen) return;
-    const p = e.touches ? e.touches[0] : e;
-    if (ultimo) {
-      const escala = (lienzo.width / Math.min(foto.imagen.width, foto.imagen.height)) * foto.zoom;
-      foto.x = Math.min(1, Math.max(0, foto.x - (p.clientX - ultimo.x) / (foto.imagen.width * escala)));
-      foto.y = Math.min(1, Math.max(0, foto.y - (p.clientY - ultimo.y) / (foto.imagen.height * escala)));
-      dibujarFoto();
-    }
-    ultimo = { x: p.clientX, y: p.clientY };
-    e.preventDefault();
-  };
-  const soltarArrastre = () => { arrastrando = false; ultimo = null; };
-  const empezar = (e) => { arrastrando = true; ultimo = null; mover(e); };
-  lienzo.addEventListener('mousedown', empezar);
-  lienzo.addEventListener('touchstart', empezar, { passive: false });
-  window.addEventListener('mousemove', mover);
-  lienzo.addEventListener('touchmove', mover, { passive: false });
-  window.addEventListener('mouseup', soltarArrastre);
-  lienzo.addEventListener('touchend', soltarArrastre);
-
-  $('#formulario').addEventListener('submit', (e) => { e.preventDefault(); generar(); });
-  $('#copiar').addEventListener('click', copiar);
-  $('#descargar').addEventListener('click', descargar);
-  $('#volver').addEventListener('click', () => {
-    $('#formulario').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    $('#nombre').focus();
+  $('#tolerancia').addEventListener('input', (e) => {
+    foto.tolerancia = Number(e.target.value);
+    dibujarPreview();
   });
 
   $$('.pestana').forEach((tab) => tab.addEventListener('click', () => {

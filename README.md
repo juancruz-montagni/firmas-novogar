@@ -10,9 +10,30 @@ alguien cierra la pestaña, no queda nada.
 
 ## Cómo se usa
 
-Entrás, completás el formulario, tocás **Generar mi firma** y te aparece la
-firma con el botón para copiarla y las instrucciones de instalación según el
-programa de correo que uses.
+Es un asistente: una pregunta por pantalla. Nombre, puesto, correo, sucursal,
+teléfonos y la imagen. Al final aparece la firma con el botón para copiarla y
+las instrucciones de instalación para Gmail, Outlook, Outlook web, Thunderbird
+y el celular.
+
+## El quitado de fondo
+
+Cuando alguien sube su foto, la app le saca el fondo sin pedirle nada. No usa
+un modelo de IA: serían decenas de megas de descarga para algo que acá se
+resuelve con geometría.
+
+Las fotos de credencial se sacan contra un fondo liso, así que el algoritmo
+toma el color de las cuatro esquinas y se expande desde los bordes hacia
+adentro mientras el color siga pareciéndose. Al avanzar por píxeles vecinos y
+no por color suelto, una camisa blanca en el medio de la foto no se borra: no
+está conectada con el borde de la imagen.
+
+El borde no se corta de golpe. Hay dos umbrales: hasta el primero es fondo
+seguro y queda transparente; entre el primero y el segundo el alfa se
+desvanece, que es lo que evita el recorte en escalera.
+
+El slider **Cuánto recortar** mueve esos umbrales, por si la foto tiene el
+fondo más o menos parejo. Y siempre se puede destildar la casilla y usar la
+foto tal cual.
 
 ## Mantenimiento
 
@@ -59,6 +80,9 @@ Dos decisiones que vienen de ahí:
 - **Los dos teléfonos comparten una línea.** Un icono propio para el fijo no se
   distingue del celular a 15px, así que van juntos bajo el mismo icono y el
   interno queda en gris, pegado al fijo.
+- **La foto va sin máscara.** Nada de círculos ni hexágonos: al sacarle el
+  fondo, la figura se apoya directamente sobre el fondo del correo y funciona
+  igual en tema claro y en oscuro.
 
 ## Detalles que quizá no se notan
 
