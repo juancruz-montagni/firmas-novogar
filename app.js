@@ -26,6 +26,27 @@ function escaparHtml(texto) {
   ));
 }
 
+/** Parte un campo que puede traer más de un número.
+ *
+ *  Hay gente que escribe dos celulares en el mismo campo. Antes se juntaban
+ *  todos los dígitos en un solo tel:, que quedaba inválido. */
+function separarNumeros(texto) {
+  const completo = (t) => t.replace(/\D/g, '').length >= 8;
+  const partes = String(texto)
+    .split(/\s*(?:[\/,;|]|\sy\s|\so\s)\s*/i)
+    .map((t) => t.trim())
+    .filter(completo);
+  if (partes.length > 1) return partes;
+
+  // El guion también separa, pero se usa adentro de un mismo número
+  // ("3412-550031"). Sólo vale como separador si las dos mitades son números
+  // completos por sí solas.
+  const porGuion = String(texto).split(/\s*[-–]\s*/).map((t) => t.trim());
+  if (porGuion.length > 1 && porGuion.every(completo)) return porGuion;
+
+  return partes;
+}
+
 /** Deja sólo dígitos y arma el tel: internacional.
  *  Los móviles argentinos llevan el 9 después del 54; los fijos, no. */
 function enlaceTelefono(numero, esMovil) {
@@ -33,7 +54,15 @@ function enlaceTelefono(numero, esMovil) {
   if (d.startsWith('54')) d = d.slice(2);
   if (esMovil && d.startsWith('9')) d = d.slice(1);
   d = d.replace(/^0/, '');
-  if (esMovil) d = d.replace(/15(?=\d{6,})/, '');
+
+  // El 15 de los móviles viejos sólo se saca si va pegado a la característica y
+  // el número queda en los 10 dígitos que corresponden. Buscarlo en cualquier
+  // posición rompía números legítimos que tienen un 15 adentro.
+  if (esMovil && d.length === 12) {
+    for (const pos of [2, 3, 4]) {
+      if (d.slice(pos, pos + 2) === '15') { d = d.slice(0, pos) + d.slice(pos + 2); break; }
+    }
+  }
   return 'tel:+54' + (esMovil ? '9' : '') + d;
 }
 
@@ -177,7 +206,11 @@ const enlace = (texto, href) => `<a href="${href}" style="color:inherit;text-dec
 function construirFirma(d) {
   const ic = ASSETS.iconos;
 
-  let telefonos = enlace(d.celular, enlaceTelefono(d.celular, true));
+  const celulares = separarNumeros(d.celular);
+  const lista = celulares.length ? celulares : [d.celular];
+  let telefonos = lista
+    .map((n) => enlace(n, enlaceTelefono(n, true)))
+    .join(`<span style="color:${GRIS_SUAVE};">&nbsp;&nbsp;|&nbsp;&nbsp;</span>`);
   if (d.fijo) {
     const interno = d.interno ? `<span style="color:${GRIS_SUAVE};">&nbsp;Int: ${escaparHtml(d.interno)}</span>` : '';
     let href = enlaceTelefono(d.fijo, false);
