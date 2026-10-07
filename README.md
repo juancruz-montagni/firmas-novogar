@@ -15,23 +15,29 @@ teléfonos y la imagen. Al final aparece la firma con el botón para copiarla y
 las instrucciones de instalación para Gmail, Outlook, Outlook web, Thunderbird
 y el celular.
 
-## La foto
+## La foto está apagada
 
-La app no le saca el fondo a la foto: manda al usuario a **remove.bg**, que lo
-hace bien, y después recibe el PNG recortado.
+Hoy todas las firmas llevan el logo: el directorio todavía no quiere fotos en
+las firmas de la empresa. La opción **Mi foto** sigue en la pantalla, marcada
+como *Próximamente* y deshabilitada.
 
-Hubo una versión que sí lo intentaba sola, con un recorte por color que se
-expandía desde los bordes. Andaba contra un fondo plano, pero con degradado o
-sombras el color variaba tanto que, o quedaban restos, o la expansión se metía
-por una zona de piel clara y abría agujeros en la cara. Hacerlo bien pide un
-modelo de segmentación: decenas de megas que cada empleado tendría que bajar
-para algo que remove.bg resuelve en dos clics. Se quitó.
+**Para habilitarla** hay que tocar dos cosas en `index.html`, en el paso 6:
+sacar el `disabled` del radio `value="foto"` y la clase `apagada` de su
+`<label>`. Todo el circuito —carga del archivo, vista previa, recorte del aire
+sobrante e inserción en la firma— sigue en su lugar y funciona.
+
+Cuando se habilite, la app no le saca el fondo a la foto: manda al usuario a
+**remove.bg** y recibe el PNG recortado. Hubo una versión que lo intentaba
+sola, con un recorte por color que se expandía desde los bordes; andaba contra
+un fondo plano, pero con degradado o sombras quedaban restos o se abrían
+agujeros en la cara. Hacerlo bien pide un modelo de segmentación: decenas de
+megas que cada empleado tendría que bajar para algo que remove.bg resuelve en
+dos clics.
 
 Lo que sí hace la app es mirar si la imagen trae transparencia (más del 3% de
 píxeles transparentes, para no confundirse con una esquina redondeada). Si ya
 viene recortada, avisa que está lista y le saca el aire de alrededor para que
-la figura ocupe todo el alto. Si todavía tiene fondo, también lo dice: la foto
-se usa igual, pero el fondo va a aparecer en la firma.
+la figura ocupe todo el alto. Si todavía tiene fondo, también lo dice.
 
 ## Mantenimiento
 

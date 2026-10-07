@@ -89,6 +89,13 @@
   .opcion span i { font-style: normal; color: var(--suave); font-size: 13px; }
   .opcion input:checked + span { border-color: var(--rojo); background: #FFF6F7; box-shadow: 0 0 0 4px rgba(214,16,30,.1); }
   .opcion input:focus-visible + span { box-shadow: 0 0 0 4px rgba(214,16,30,.3); }
+  .opcion.apagada span { background: #F7F8F9; border-style: dashed; cursor: not-allowed; opacity: .75; }
+  .opcion.apagada span:hover { border-color: #D9DDE2; transform: none; }
+  .pronto {
+    font-style: normal; font-size: 10.5px; font-weight: bold; letter-spacing: .9px;
+    text-transform: uppercase; color: var(--rojo); background: #FFE9EB;
+    padding: 3px 8px; border-radius: 999px; margin-left: 8px; vertical-align: 1px;
+  }
 
   /* ------------------------------------------------------------------ foto */
   .zona-foto { margin-top: 20px; }
@@ -233,7 +240,7 @@
     </div>
     <div class="tarjetitas suave-entrada" id="tarjetitas">
       <div class="tarjetita"><b>Dura un minuto</b>Nombre, puesto, sucursal y listo.</div>
-      <div class="tarjetita"><b>Tu foto no se sube</b>Se arma todo en tu propia compu.</div>
+      <div class="tarjetita"><b>Todo en tu compu</b>No se guarda nada en ningún servidor.</div>
       <div class="tarjetita"><b>Anda en todos lados</b>Gmail, Outlook y Thunderbird.</div>
     </div>
   </section>
@@ -319,16 +326,18 @@
   </section>
 
   <section class="pantalla" data-paso="6">
-    <h2 class="pregunta">Última: ¿logo o tu cara?</h2>
-    <p class="detalle">Si elegís foto, usá una con la chomba o la camisa de Novogar.</p>
+    <h2 class="pregunta">Por último, la imagen</h2>
+    <p class="detalle">Por ahora todas las firmas de la empresa llevan el logo.</p>
     <div class="opciones">
       <label class="opcion">
         <input type="radio" name="imagen" value="logo" checked />
         <span><b>El logo de Novogar</b><i>Igual para todos, siempre prolijo.</i></span>
       </label>
-      <label class="opcion">
-        <input type="radio" name="imagen" value="foto" />
-        <span><b>Mi foto</b><i>Mejor si ya viene recortada.</i></span>
+      <!-- Para habilitar las fotos: sacar el disabled de acá abajo y la clase
+           "apagada" del label. El resto del circuito ya funciona. -->
+      <label class="opcion apagada">
+        <input type="radio" name="imagen" value="foto" disabled />
+        <span><b>Mi foto <em class="pronto">Próximamente</em></b><i>El directorio todavía no usa fotos en las firmas.</i></span>
       </label>
     </div>
 
