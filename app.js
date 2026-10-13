@@ -227,6 +227,11 @@ function construirFirma(d) {
     d.direccion ? filaContacto(ic.pin, enlace(d.direccion, mapsLink(d.direccion))) : '',
   ].join('');
 
+  // El alcance es opcional: cuando está, el puesto le cede el espacio de abajo
+  const filaAlcance = d.alcance
+    ? `<tr><td style="padding:0 0 12px 0;font-family:${PILA};font-size:12.5px;line-height:17px;color:${GRIS_SUAVE};">${escaparHtml(d.alcance)}</td></tr>`
+    : '';
+
   const img = d.imagen;
   return `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
   <tr>
@@ -234,7 +239,8 @@ function construirFirma(d) {
     <td style="padding:0;vertical-align:middle;">
       <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
         <tr><td style="padding:0 0 1px 0;font-family:${PILA};font-size:20px;line-height:26px;font-weight:bold;letter-spacing:.2px;">${escaparHtml(d.nombre)}</td></tr>
-        <tr><td style="padding:0 0 12px 0;font-family:${PILA};font-size:13.5px;line-height:18px;color:${GRIS_SUAVE};">${escaparHtml(d.puesto)}</td></tr>
+        <tr><td style="padding:0 0 ${d.alcance ? 1 : 12}px 0;font-family:${PILA};font-size:13.5px;line-height:18px;color:${GRIS_SUAVE};">${escaparHtml(d.puesto)}</td></tr>
+        ${filaAlcance}
         <tr><td style="padding:0;">
           <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">${filas}</table>
         </td></tr>
@@ -340,6 +346,7 @@ function generar() {
   firmaActual = construirFirma({
     nombre: $('#nombre').value.trim(),
     puesto: $('#puesto').value.trim(),
+    alcance: $('#alcance').value.trim(),
     mail: $('#mail').value.trim(),
     celular: $('#celular').value.trim(),
     fijo: suc ? suc.telefono : '',
