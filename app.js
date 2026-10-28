@@ -386,11 +386,20 @@ async function copiar() {
 
 function descargar() {
   if (!firmaActual) return;
+  // El archivo lleva la firma y nada más. En Thunderbird este archivo ES la
+  // firma: se inserta entero en cada correo, así que cualquier instrucción
+  // que se agregue acá termina saliendo en los mails. Lo que haya que
+  // explicar va en la página, no en el archivo. El comentario de abajo no se
+  // renderiza, así que es seguro.
   const pagina = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8" /><title>Mi firma · Novogar</title></head>
-<body style="margin:0;padding:28px;font-family:${PILA};">
-<p style="font-size:13px;color:#6E737A;max-width:640px;">Seleccioná la firma de abajo con el mouse, copiala con Ctrl+C y pegala en la configuración de firma de tu correo. Si usás Thunderbird, no copies nada: apuntale a este mismo archivo.</p>
-<hr style="border:none;border-top:1px solid #E2E4E8;margin:18px 0;" />
+<body style="margin:0;">
+<!--
+  Firma de correo de Novogar.
+  Thunderbird: Configuración de cuenta > Adjuntar la firma de un archivo > elegí este archivo.
+  Gmail y Outlook: abrilo en el navegador, seleccioná la firma, Ctrl+C y pegala en la
+  configuración de firma. Los pasos completos están en el generador.
+-->
 ${firmaActual}
 </body></html>`;
   const a = document.createElement('a');
